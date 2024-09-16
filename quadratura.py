@@ -1,4 +1,5 @@
 from sympy import *
+import math
 class Quadratura():
     def __init__(self):
         [self.f_symb, self.f, self.a, self.b] = self.set_data()
@@ -9,51 +10,122 @@ class Quadratura():
         f = lambdify(x, f_symb)  # trasforma la funzione simbolica in espressione matematica
         return f_symb, f
 
+    def vett(self, f, a, b, h):  # crea il vettore x dei nodi, da a a b spaziati di h e il vettore fx, contenente tutti i valori che f assume nei nodi (approssimazione a 4 cifre dopo la virgola)
+        # che per ogni i è uguale a f(v(i))
+        x = []
+        fx = []
+        k = a
+        while k <= b:
+            x.append(k)
+            k = round(k+h, 4)
+        if b not in x:
+            x.append(b)
+        for i in range(len(x)):  # len(v) = len(fx) = N + 1
+            fx.append(round(f(x[i]), 4))
+        return x, fx
+    def set_data(self):
+        f_symb, f = self.set_function()
+        a = float(input("Inserisci l'estremo sinistro dell'intervallo: "))
+        b = self.set_b(a)
+        return f_symb, f, a, b
     def set_b(self, a):
         b = float(input("Estremo destro dell'intervallo: "))
         if b == a or b < a:
             print("L'estremo b è uguale all'estremo a. Riprova.")
             self.set_b(a)
         return b
-
-    def trapezi_semplice(self, f, a, b):
-        h = b - a
-        M = 1
-        valore = (h / 2) * (f(a) + f(b))
-        resto = -((h ** 3) * M) / 12
-        print(f"Valore dell'integrale: {valore} con un errore di {resto}")
-
-    def trapezi_composta(self, f_symb, f, a, b):
+    def get_N_M_1(self, f_symb, a, b):  #calcola il numero di sottointervalli da usare in base alla precisione specificata (N) e il max valore della derivata seconda
+        #di f tra a e b (cioè M)
         v = []
         x = symbols("x")
         E = float(input("Inserisci la precisione desiderata: "))
         devf = lambdify(x, diff(f_symb))
-        v.append(devf(a))
-        v.append(devf(b))
+        v.append(abs(devf(a)))
+        v.append(abs(devf(b)))
         M = max(v)
-        N = int(sqrt((((b - a) ** 3) * M) / (12 * E)))
-        h = float((b - a) / N)  # h è il valore di un sottointervallo
-        fx = self.vett(f, a, b, h)
-        valore = ((h / 2) * (fx[0] + fx[N - 1])) + h * (sum(fx[1:N - 1]))
-        resto = -((((b - a) ** 3) * M) / (12 * (N ** 2)))
-        print(f"Valore dell'integrale: {valore} con {N} sottointervalli.")
+        N = int(round(sqrt((((b - a) ** 3) * M) / (12 * E))))
+        return M, N
 
-    def vett(self, f, a, b, h):  # crea il vettore v con elementi da a a b spaziati di h e il vettore fx
-        # che per ogni i è uguale a f(v(i))
+    def get_N_M_2(self, f_symb, a, b): #calcola il max valore della derivata quarta di f tra a e b (cioè M) e il numero di sottointervalli da usare in base alla
+        #precisione specificata (N)
         v = []
-        fx = []
-        k = a
-        while k <= b:
-            v.append(k)
-            k += h
-        print(len(v))
-        for i in range(len(v)):  # len(v) = N + 1
-            fx.append(f(v[i]))
-        return fx
+        x = symbols("x")
+        E = float(input("Inserisci la precisione desiderata: "))
+        dev4f = lambdify(x, diff(f_symb, x, 4)) #derivata quarta
+        v.append(abs(dev4f(a)))
+        v.append(abs(dev4f(b)))
+        M = max(v)
+        N = math.ceil(pow((((b-a)**5)*M)/(180*E), 1/4)) #radice quarta
+        return M, N
+    def get_M(self, f_symb, a, b):
+        v = []
+        x = symbols("x")
+        dev2f = lambdify(x, diff(f_symb, x, 2)) #derivata seconda
+        v.append(abs(dev2f(a)))
+        v.append(abs(dev2f(b)))
+        return max(v)
 
-    def set_data(self):
-        f_symb, f = self.set_function()
-        a = float(input("Inserisci l'estremo sinistro dell'intervallo: "))
-        b = self.set_b(a)
-        return f_symb, f, a, b
+    def trapezi_semplice(self, f_symb, f, a, b):
+        h = b - a
+        M = self.get_M(f_symb, a, b)
+        valore = round((h/2) * (f(a) + f(b)), 4)
+        resto = round(-((h ** 3) * M) / 12, 4)
+        print(f"Valore dell'integrale: {valore} con un resto di {resto}")
+        return valore
+
+    def trapezi_composta(self, f_symb, f, a, b):
+        M, N = self.get_N_M_1(f_symb, a, b)
+        h = float((b - a) / N) # h è il valore di un sottointervallo
+        x, fx = self.vett(f, a, b, h)
+        valore = 0
+        for i in range(N):
+            valore += ((h/2) * (fx[i] + fx[i+1]))
+        valore = round(valore, 4)
+        resto = round(-(((b-a)**3)*M)/(N**2), 4)
+        print(f"valore dell'integrale: {valore} con un resto di {resto}")
+
+    def simpson_semplice(self, f_symb, f, a, b):
+        h = float((b-a)/2) #N = 2
+        c = a + h
+        M, N = self.get_N_M_2(f_symb, a, b)
+        valore = round((h/3) * (f(a) + 4*f(c) + f(b)), 4)
+        resto = round(-((h**3)*M)/90, 4)
+        print(f"Valore dell'integrale: {valore} con un resto di {resto}")
+
+    def simpson_composta(self, f_symb, f, a, b): #N deve essere pari
+        M, N = self.get_N_M_2(f_symb, a, b)
+        if N % 2 == 1: #N dispari
+            N += 1
+        h = float((b-a)/N)
+        x, fx = self.vett(f, a, b, h)
+        valore = 0
+        for i in range(int(N/2)):
+            valore += ((h/3) * (fx[2*i] + 4*fx[(2*i)+1] + fx[(2*i)+2]))
+        valore = round(valore, 4)
+        resto = round(-((h**5)*N*M)/180, 4)
+        print(f"valore dell'integrale: {valore} con un resto di {resto}")
+
+    def punto_di_mezzo_semplice(self, f_symb, f, a, b):
+        c = (b + a)/2 #punto di mezzo tra a e b
+        h = (b - a)/2 #spaziatura tra i nodi a b c
+        M = self.get_M(f_symb, a, b)
+        valore = (f(c)*(b-a))
+        resto = ((h**3)*M)/24
+        print(f"valore dell'integrale: {valore} con un resto di {resto}")
+
+    def punto_di_mezzo_composta(self, f_symb, f, a, b):
+        M = self.get_M(f_symb, a, b)
+        E = float(input("Inserisci la precisione desiderata: "))
+        N = math.ceil(pow((((b-a)**3)*M)/(24*E), 1/3))
+        if N % 2 == 1:
+            N += 1
+        h = (b-a)/N
+        x, fx = self.vett(f, a, b, h)
+        valore = 0
+        for i in range(int(N/2)):
+            valore += (fx[(2*i)+1] * (x[(2*i)+2] - x[(2*i)]))
+        valore = round(valore, 4)
+        resto = round((((b-a)**3)*M)/(6*(N**2)), 4)
+        print(f"valore dell'integrale: {valore} con un resto di {resto}")
+
 
