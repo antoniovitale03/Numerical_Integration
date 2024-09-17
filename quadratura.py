@@ -34,66 +34,46 @@ class Quadratura():
             print("L'estremo b è uguale all'estremo a. Riprova.")
             self.set_b(a)
         return b
-    def get_N_M_1(self, f_symb, a, b):  #calcola il numero di sottointervalli da usare in base alla precisione specificata (N) e il max valore della derivata seconda
-        #di f tra a e b (cioè M)
+    def get_M(self, f_symb, a, b, n): #n rappresenta il grado della derivata
         v = []
         x = symbols("x")
-        E = float(input("Inserisci la precisione desiderata: "))
-        devf = lambdify(x, diff(f_symb))
+        devf = lambdify(x, diff(f_symb, x, n))
         v.append(abs(devf(a)))
         v.append(abs(devf(b)))
-        M = max(v)
-        N = int(round(sqrt((((b - a) ** 3) * M) / (12 * E))))
-        return M, N
-
-    def get_N_M_2(self, f_symb, a, b): #calcola il max valore della derivata quarta di f tra a e b (cioè M) e il numero di sottointervalli da usare in base alla
-        #precisione specificata (N)
-        v = []
-        x = symbols("x")
-        E = float(input("Inserisci la precisione desiderata: "))
-        dev4f = lambdify(x, diff(f_symb, x, 4)) #derivata quarta
-        v.append(abs(dev4f(a)))
-        v.append(abs(dev4f(b)))
-        M = max(v)
-        N = math.ceil(pow((((b-a)**5)*M)/(180*E), 1/4)) #radice quarta
-        return M, N
-    def get_M(self, f_symb, a, b):
-        v = []
-        x = symbols("x")
-        dev2f = lambdify(x, diff(f_symb, x, 2)) #derivata seconda
-        v.append(abs(dev2f(a)))
-        v.append(abs(dev2f(b)))
         return max(v)
 
     def trapezi_semplice(self, f_symb, f, a, b):
         h = b - a
-        M = self.get_M(f_symb, a, b)
-        valore = round((h/2) * (f(a) + f(b)), 4)
-        resto = round(-((h ** 3) * M) / 12, 4)
-        print(f"Valore dell'integrale: {valore} con un resto di {resto}")
+        M = self.get_M(f_symb, a, b, 2)
+        valore = (h/2) * (f(a) + f(b))
+        resto = -((h ** 3) * M)/12
+        print(f"Valore dell'integrale: {round(valore, 4)} con un resto di {round(resto, 4)}")
         return valore
 
     def trapezi_composta(self, f_symb, f, a, b):
-        M, N = self.get_N_M_1(f_symb, a, b)
+        M = self.get_M(f_symb, a, b, 2) #max valore della derivata seconda
+        E = float(input("Inserisci la precisione desiderata: "))
+        N = int(round(sqrt((((b - a) ** 3) * M) / (12 * E))))
         h = float((b - a) / N) # h è il valore di un sottointervallo
         x, fx = self.vett(f, a, b, h)
         valore = 0
         for i in range(N):
             valore += ((h/2) * (fx[i] + fx[i+1]))
-        valore = round(valore, 4)
-        resto = round(-(((b-a)**3)*M)/(N**2), 4)
-        print(f"valore dell'integrale: {valore} con un resto di {resto}")
+        resto = -(((b-a)**3)*M)/(12*(N**2))
+        print(f"valore dell'integrale: {round(valore, 4)} con un resto di {round(resto, 4)}")
 
     def simpson_semplice(self, f_symb, f, a, b):
         h = float((b-a)/2) #N = 2
         c = a + h
-        M, N = self.get_N_M_2(f_symb, a, b)
-        valore = round((h/3) * (f(a) + 4*f(c) + f(b)), 4)
-        resto = round(-((h**3)*M)/90, 4)
-        print(f"Valore dell'integrale: {valore} con un resto di {resto}")
+        M = self.get_M(f_symb, a, b, 4)
+        valore = (h/3) * (f(a) + 4*f(c) + f(b))
+        resto = -((h**3)*M)/90
+        print(f"Valore dell'integrale: {round(valore, 4)} con un resto di {round(resto, 4)}")
 
     def simpson_composta(self, f_symb, f, a, b): #N deve essere pari
-        M, N = self.get_N_M_2(f_symb, a, b)
+        M = self.get_M(f_symb, a, b, 4)
+        E = float(input("Inserisci la precisione desiderata: "))
+        N = math.ceil(pow((((b - a) ** 5) * M) / (180 * E), 1 / 4))  # radice quarta
         if N % 2 == 1: #N dispari
             N += 1
         h = float((b-a)/N)
@@ -101,20 +81,19 @@ class Quadratura():
         valore = 0
         for i in range(int(N/2)):
             valore += ((h/3) * (fx[2*i] + 4*fx[(2*i)+1] + fx[(2*i)+2]))
-        valore = round(valore, 4)
-        resto = round(-((h**5)*N*M)/180, 4)
-        print(f"valore dell'integrale: {valore} con un resto di {resto}")
+        resto = -((h**5)*N*M)/180
+        print(f"valore dell'integrale: {round(valore, 4)} con un resto di {round(resto, 4)}")
 
     def punto_di_mezzo_semplice(self, f_symb, f, a, b):
         c = (b + a)/2 #punto di mezzo tra a e b
         h = (b - a)/2 #spaziatura tra i nodi a b c
-        M = self.get_M(f_symb, a, b)
+        M = self.get_M(f_symb, a, b, 2)
         valore = (f(c)*(b-a))
         resto = ((h**3)*M)/24
-        print(f"valore dell'integrale: {valore} con un resto di {resto}")
+        print(f"valore dell'integrale: {round(valore, 4)} con un resto di {round(resto, 4)}")
 
     def punto_di_mezzo_composta(self, f_symb, f, a, b):
-        M = self.get_M(f_symb, a, b)
+        M = self.get_M(f_symb, a, b, 2)
         E = float(input("Inserisci la precisione desiderata: "))
         N = math.ceil(pow((((b-a)**3)*M)/(24*E), 1/3))
         if N % 2 == 1:
@@ -124,8 +103,6 @@ class Quadratura():
         valore = 0
         for i in range(int(N/2)):
             valore += (fx[(2*i)+1] * (x[(2*i)+2] - x[(2*i)]))
-        valore = round(valore, 4)
-        resto = round((((b-a)**3)*M)/(6*(N**2)), 4)
-        print(f"valore dell'integrale: {valore} con un resto di {resto}")
+        print(f"valore dell'integrale: {round(valore, 4)} con un resto di {round(resto, 4)}")
 
 
