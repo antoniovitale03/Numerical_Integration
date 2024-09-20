@@ -23,5 +23,5 @@ def main():
     else:
         print("Input non valido.Riprova")
         main()
-
-main()
+if __name__ == "__main__":
+    main()
